@@ -491,6 +491,78 @@ func (t *GetMessageResourceTool) Execute(ctx context.Context, args map[string]an
 }
 
 // ============================================================
+// feishu_add_reaction
+// ============================================================
+
+// AddReactionTool 给指定消息添加表情回复。
+type AddReactionTool struct {
+	client *Client
+}
+
+func newAddReactionTool(c *Client) *AddReactionTool {
+	return &AddReactionTool{client: c}
+}
+
+func (t *AddReactionTool) Name() string { return "feishu_add_reaction" }
+
+func (t *AddReactionTool) Description() string {
+	return "给飞书消息添加表情回复（Reaction）。" +
+		"emoji_type 为表情类型，常用值：THUMBSUP(+1/赞)、OK、SMILE、JIAYI(+1)、APPLAUSE(鼓掌)、" +
+		"FIST(加油)、HEART(爱心)、LAUGH(大笑)、FIREWORKS(庆祝)、MUSCLE(强)等。" +
+		"完整列表参考飞书文档。"
+}
+
+func (t *AddReactionTool) Parameters() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"message_id": map[string]any{
+				"type":        "string",
+				"description": "要添加表情的消息 ID，格式如 om_xxx",
+			},
+			"emoji_type": map[string]any{
+				"type":        "string",
+				"description": "表情类型，如 THUMBSUP、OK、SMILE、JIAYI、APPLAUSE、HEART 等",
+			},
+		},
+		"required": []string{"message_id", "emoji_type"},
+	}
+}
+
+func (t *AddReactionTool) Execute(ctx context.Context, args map[string]any) *tools.ToolResult {
+	messageID, _ := args["message_id"].(string)
+	emojiType, _ := args["emoji_type"].(string)
+
+	if messageID == "" {
+		return tools.ErrorResult("message_id 不能为空")
+	}
+	if emojiType == "" {
+		return tools.ErrorResult("emoji_type 不能为空")
+	}
+
+	req := larkim.NewCreateMessageReactionReqBuilder().
+		MessageId(messageID).
+		Body(larkim.NewCreateMessageReactionReqBodyBuilder().
+			ReactionType(larkim.NewEmojiBuilder().EmojiType(emojiType).Build()).
+			Build()).
+		Build()
+
+	resp, err := t.client.lark.Im.V1.MessageReaction.Create(ctx, req)
+	if err != nil {
+		return tools.ErrorResult(fmt.Sprintf("添加表情回复失败: %v", err))
+	}
+	if !resp.Success() {
+		return tools.ErrorResult(fmt.Sprintf("飞书 API 错误: code=%d msg=%s", resp.Code, resp.Msg))
+	}
+
+	reactionID := ""
+	if resp.Data != nil && resp.Data.ReactionId != nil {
+		reactionID = *resp.Data.ReactionId
+	}
+	return tools.SilentResult(fmt.Sprintf("表情回复添加成功，reaction_id=%s", reactionID))
+}
+
+// ============================================================
 // 内部工具函数
 // ============================================================
 

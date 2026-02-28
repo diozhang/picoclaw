@@ -1,14 +1,15 @@
 //go:build amd64 || arm64 || riscv64 || mips64 || ppc64
 
 // Package feishu 提供飞书 API 工具集，让 Agent 能够主动调用飞书各类能力。
-// 工具清单（13 个）：
+// 工具清单（14 个）：
 //
-// 消息类（5个）：
+// 消息类（6个）：
 //   - feishu_send_message       向指定会话发送文本/富文本/卡片消息
 //   - feishu_reply_message      回复指定消息
 //   - feishu_get_message        获取消息详情
 //   - feishu_list_messages      获取会话历史消息列表
 //   - feishu_get_message_resource 下载消息中的图片/文件/音视频
+//   - feishu_add_reaction       给消息添加表情回复（+1、OK、爱心等）
 //
 // 通讯录类（4个）：
 //   - feishu_get_user           获取用户详情
@@ -40,6 +41,7 @@ func RegisterFeishuTools(registry *tools.ToolRegistry, appID, appSecret, workspa
 	registry.Register(newGetMessageTool(client))
 	registry.Register(newListMessagesTool(client))
 	registry.Register(newGetMessageResourceTool(client, workspace))
+	registry.Register(newAddReactionTool(client))
 
 	// 通讯录类
 	registry.Register(newGetUserTool(client))
