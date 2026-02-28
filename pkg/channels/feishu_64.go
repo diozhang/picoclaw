@@ -176,7 +176,7 @@ func containsMarkdown(s string) bool {
 	return false
 }
 
-func (c *FeishuChannel) handleMessageReceive(_ context.Context, event *larkim.P2MessageReceiveV1) error {
+func (c *FeishuChannel) handleMessageReceive(ctx context.Context, event *larkim.P2MessageReceiveV1) error {
 	if event == nil || event.Event == nil || event.Event.Message == nil {
 		return nil
 	}
@@ -213,6 +213,24 @@ func (c *FeishuChannel) handleMessageReceive(_ context.Context, event *larkim.P2
 		metadata["tenant_key"] = *sender.TenantKey
 	}
 
+	// 提取引用消息的 ID（parent_id 是直接回复的消息，root_id 是整个回复链的根消息）
+	parentID := stringValue(message.ParentId)
+	rootID := stringValue(message.RootId)
+	if parentID != "" {
+		metadata["parent_id"] = parentID
+	}
+	if rootID != "" {
+		metadata["root_id"] = rootID
+	}
+
+	// 如果是引用消息，获取被引用消息的内容并以 Quote Block 格式注入
+	if parentID != "" {
+		quotedContent := c.fetchQuotedMessage(ctx, parentID)
+		if quotedContent != "" {
+			content = quotedContent + "\n---\n" + content
+		}
+	}
+
 	chatType := stringValue(message.ChatType)
 	if chatType == "p2p" {
 		metadata["peer_kind"] = "direct"
@@ -225,6 +243,7 @@ func (c *FeishuChannel) handleMessageReceive(_ context.Context, event *larkim.P2
 	logger.InfoCF("feishu", "Feishu message received", map[string]any{
 		"sender_id": senderID,
 		"chat_id":   chatID,
+		"parent_id": parentID,
 		"preview":   utils.Truncate(content, 80),
 	})
 
@@ -272,4 +291,107 @@ func stringValue(v *string) string {
 		return ""
 	}
 	return *v
+}
+
+// fetchQuotedMessage 获取被引用消息的内容，并格式化为 Quote Block。
+// 返回格式：[Feishu quote om_xxx] 发送者: 原消息内容
+func (c *FeishuChannel) fetchQuotedMessage(ctx context.Context, messageID string) string {
+	if messageID == "" {
+		return ""
+	}
+
+	req := larkim.NewGetMessageReqBuilder().
+		MessageId(messageID).
+		Build()
+
+	resp, err := c.client.Im.V1.Message.Get(ctx, req)
+	if err != nil {
+		logger.WarnCF("feishu", "Failed to fetch quoted message", map[string]any{
+			"message_id": messageID,
+			"error":      err.Error(),
+		})
+		return ""
+	}
+
+	if !resp.Success() || resp.Data == nil || len(resp.Data.Items) == 0 {
+		logger.WarnCF("feishu", "Quoted message not found or API error", map[string]any{
+			"message_id": messageID,
+			"code":       resp.Code,
+			"msg":        resp.Msg,
+		})
+		return ""
+	}
+
+	item := resp.Data.Items[0]
+
+	// 提取发送者信息
+	senderName := "未知用户"
+	if item.Sender != nil {
+		if item.Sender.Id != nil && *item.Sender.Id != "" {
+			senderName = *item.Sender.Id
+		}
+	}
+
+	// 提取消息内容
+	quotedText := ""
+	if item.Body != nil && item.Body.Content != nil {
+		msgType := stringValue(item.MsgType)
+		quotedText = extractMessageBodyContent(msgType, *item.Body.Content)
+	}
+
+	if quotedText == "" {
+		quotedText = "[无法解析的消息类型]"
+	}
+
+	// 格式化为 Quote Block，便于 LLM 理解上下文
+	return fmt.Sprintf("[Feishu quote %s] %s: %s", messageID, senderName, quotedText)
+}
+
+// extractMessageBodyContent 从消息体中提取文本内容。
+func extractMessageBodyContent(msgType, content string) string {
+	switch msgType {
+	case "text":
+		var textPayload struct {
+			Text string `json:"text"`
+		}
+		if err := json.Unmarshal([]byte(content), &textPayload); err == nil {
+			return textPayload.Text
+		}
+	case "post":
+		// post 富文本格式，尝试提取纯文本
+		var postPayload struct {
+			ZhCN struct {
+				Title   string `json:"title"`
+				Content [][]struct {
+					Tag  string `json:"tag"`
+					Text string `json:"text"`
+				} `json:"content"`
+			} `json:"zh_cn"`
+		}
+		if err := json.Unmarshal([]byte(content), &postPayload); err == nil {
+			var texts []string
+			if postPayload.ZhCN.Title != "" {
+				texts = append(texts, postPayload.ZhCN.Title)
+			}
+			for _, line := range postPayload.ZhCN.Content {
+				for _, elem := range line {
+					if elem.Text != "" {
+						texts = append(texts, elem.Text)
+					}
+				}
+			}
+			return strings.Join(texts, " ")
+		}
+	case "image":
+		return "[图片]"
+	case "file":
+		return "[文件]"
+	case "audio":
+		return "[语音]"
+	case "video":
+		return "[视频]"
+	case "sticker":
+		return "[表情包]"
+	}
+	return content
 }
