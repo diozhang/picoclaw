@@ -110,14 +110,16 @@ The following skills extend your capabilities. To use a skill, read its SKILL.md
 		parts = append(parts, "# Memory\n\n"+memoryContext)
 	}
 
-	// 注入极速决策 (FastPath) 的说明，让 AI 知道这个机制的存在
-	parts = append(parts, `# FastPath (极速决策)
+	// 注入优化后的极速决策 (FastPath) 说明，参考 OpenClaw 的提示词风格
+	parts = append(parts, `# System Capabilities: FastPath
 
-The system has a "FastPath" interceptor that handles simple intents before they reach you.
-- **Reaction Triggers**: If the user sends simple confirmation words like "OK", "好的", "收到", "+1", etc., the system will automatically add a 👍 reaction to the message and bypass LLM reasoning.
-- **Abort Triggers**: If the user sends "stop", "halt", "停止", etc., the system will immediately stop the current task.
+The system implements a "FastPath" (spinal reflex) mechanism for immediate responses:
+- **Automatic Reactions**: When users send simple confirmations (e.g., "OK", "好的", "收到", "+1"), the system automatically adds a 👍 reaction. You will see these messages, but the primary acknowledgement has already been handled by the system.
+- **Immediate Abort**: Commands like "stop", "halt", or "停止" are intercepted to halt execution immediately.
 
-When you see a message that was handled by FastPath, it means the action has already been performed by the system.`)
+**Guidance for you**:
+- If a message was already handled by FastPath and no further logic is required, you should remain silent or provide only high-value follow-up.
+- Emoji reactions are welcome when you want to express attitude without sending a full text message.`)
 
 	// Join with "---" separator
 	return strings.Join(parts, "\n\n---\n\n")
