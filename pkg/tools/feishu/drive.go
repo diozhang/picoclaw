@@ -152,11 +152,12 @@ func (t *DownloadDocMediaTool) Execute(ctx context.Context, args map[string]any)
 		if resp.FileName != "" {
 			saveName = resp.FileName
 		} else {
-			saveName = fmt.Sprintf("doc_media_%d", time.Now().UnixNano())
+			saveName = fmt.Sprintf("doc_media_%d.bin", time.Now().UnixNano())
 		}
 	}
 
-	savePath := filepath.Join(t.workspace, saveName)
+	// 文档媒体统一存放到 downloads/feishu/docs/ 子目录
+	savePath := filepath.Join(t.workspace, "downloads", "feishu", "docs", saveName)
 	if err := saveStream(resp.File, savePath); err != nil {
 		return tools.ErrorResult(fmt.Sprintf("保存文件失败: %v", err))
 	}

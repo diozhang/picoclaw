@@ -478,11 +478,20 @@ func (t *GetMessageResourceTool) Execute(ctx context.Context, args map[string]an
 		if resp.FileName != "" {
 			saveName = resp.FileName
 		} else {
-			saveName = fmt.Sprintf("feishu_%s_%d", resType, time.Now().UnixNano())
+			ext := ".bin"
+			if resType == "image" {
+				ext = ".jpg"
+			}
+			saveName = fmt.Sprintf("feishu_%s_%d%s", resType, time.Now().UnixNano(), ext)
 		}
 	}
 
-	savePath := filepath.Join(t.workspace, saveName)
+	// 按资源类型分子目录：downloads/feishu/images/ 或 downloads/feishu/files/
+	subDir := "files"
+	if resType == "image" {
+		subDir = "images"
+	}
+	savePath := filepath.Join(t.workspace, "downloads", "feishu", subDir, saveName)
 	if err := saveStream(resp.File, savePath); err != nil {
 		return tools.ErrorResult(fmt.Sprintf("保存文件失败: %v", err))
 	}
