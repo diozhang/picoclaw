@@ -361,7 +361,7 @@ func (cb *ContextBuilder) LoadBootstrapFiles() string {
 //
 // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
 // See: https://platform.openai.com/docs/guides/prompt-caching
-func (cb *ContextBuilder) buildDynamicContext(channel, chatID string) string {
+func (cb *ContextBuilder) buildDynamicContext(channel, chatID string, metadata map[string]string) string {
 	now := time.Now().Format("2006-01-02 15:04 (Monday)")
 	rt := fmt.Sprintf("%s %s, Go %s", runtime.GOOS, runtime.GOARCH, runtime.Version())
 
@@ -370,6 +370,20 @@ func (cb *ContextBuilder) buildDynamicContext(channel, chatID string) string {
 
 	if channel != "" && chatID != "" {
 		fmt.Fprintf(&sb, "\n\n## Current Session\nChannel: %s\nChat ID: %s", channel, chatID)
+	}
+
+	// 注入消息元数据（message_id 等），让 LLM 可以直接使用而不需要从文本中提取
+	if len(metadata) > 0 {
+		sb.WriteString("\n\n## Message Context")
+		if msgID := metadata["message_id"]; msgID != "" {
+			fmt.Fprintf(&sb, "\nMessage ID: %s", msgID)
+		}
+		if msgType := metadata["message_type"]; msgType != "" {
+			fmt.Fprintf(&sb, "\nMessage Type: %s", msgType)
+		}
+		if chatType := metadata["chat_type"]; chatType != "" {
+			fmt.Fprintf(&sb, "\nChat Type: %s", chatType)
+		}
 	}
 
 	return sb.String()
@@ -381,6 +395,7 @@ func (cb *ContextBuilder) BuildMessages(
 	currentMessage string,
 	media []string,
 	channel, chatID string,
+	metadata map[string]string,
 ) []providers.Message {
 	messages := []providers.Message{}
 
@@ -395,8 +410,8 @@ func (cb *ContextBuilder) BuildMessages(
 	// - OpenAI-compat passes messages through as-is.
 	staticPrompt := cb.BuildSystemPromptWithCache()
 
-	// Build short dynamic context (time, runtime, session) — changes per request
-	dynamicCtx := cb.buildDynamicContext(channel, chatID)
+	// Build short dynamic context (time, runtime, session, message metadata) — changes per request
+	dynamicCtx := cb.buildDynamicContext(channel, chatID, metadata)
 
 	// Compose a single system message: static (cached) + dynamic + optional summary.
 	// Keeping all system content in one message ensures every provider adapter can
