@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/sipeed/picoclaw/pkg/bus"
@@ -60,7 +59,8 @@ func (h *FastPathHandler) TryHandle(ctx context.Context, msg bus.InboundMessage,
 					})
 					return "", false // 失败则降级走 LLM
 				}
-				return fmt.Sprintf("[极速决策] 已为您点赞 (%s)", emojiType), true
+				// 保持静默，不返回任何文本反馈
+				return "", true
 			}
 		}
 	}
