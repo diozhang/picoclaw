@@ -225,6 +225,12 @@ type FeishuConfig struct {
 	EncryptKey        string              `json:"encrypt_key"        env:"PICOCLAW_CHANNELS_FEISHU_ENCRYPT_KEY"`
 	VerificationToken string              `json:"verification_token" env:"PICOCLAW_CHANNELS_FEISHU_VERIFICATION_TOKEN"`
 	AllowFrom         FlexibleStringSlice `json:"allow_from"         env:"PICOCLAW_CHANNELS_FEISHU_ALLOW_FROM"`
+	Tools             FeishuToolsConfig   `json:"tools"`
+}
+
+// FeishuToolsConfig 控制飞书 API 工具集的启用状态。
+type FeishuToolsConfig struct {
+	Enabled bool `json:"enabled" env:"PICOCLAW_CHANNELS_FEISHU_TOOLS_ENABLED"`
 }
 
 type DiscordConfig struct {

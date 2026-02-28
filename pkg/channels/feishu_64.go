@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,7 +98,7 @@ func (c *FeishuChannel) Send(ctx context.Context, msg bus.OutboundMessage) error
 		return fmt.Errorf("chat ID is empty")
 	}
 
-	payload, err := json.Marshal(map[string]string{"text": msg.Content})
+	msgType, payload, err := buildFeishuPayload(msg.Content)
 	if err != nil {
 		return fmt.Errorf("failed to marshal feishu content: %w", err)
 	}
@@ -106,8 +107,8 @@ func (c *FeishuChannel) Send(ctx context.Context, msg bus.OutboundMessage) error
 		ReceiveIdType(larkim.ReceiveIdTypeChatId).
 		Body(larkim.NewCreateMessageReqBodyBuilder().
 			ReceiveId(msg.ChatID).
-			MsgType(larkim.MsgTypeText).
-			Content(string(payload)).
+			MsgType(msgType).
+			Content(payload).
 			Uuid(fmt.Sprintf("picoclaw-%d", time.Now().UnixNano())).
 			Build()).
 		Build()
@@ -122,10 +123,57 @@ func (c *FeishuChannel) Send(ctx context.Context, msg bus.OutboundMessage) error
 	}
 
 	logger.DebugCF("feishu", "Feishu message sent", map[string]any{
-		"chat_id": msg.ChatID,
+		"chat_id":  msg.ChatID,
+		"msg_type": msgType,
 	})
 
 	return nil
+}
+
+// buildFeishuPayload 根据消息内容自动选择消息类型：
+// 含 Markdown 语法时使用 post 富文本的 md 标签（飞书原生支持 Markdown 渲染），否则发纯文本。
+func buildFeishuPayload(content string) (msgType string, payload string, err error) {
+	if containsMarkdown(content) {
+		// 使用飞书 post 富文本的 md 标签，直接传入 Markdown 字符串，飞书会自动渲染
+		// 参考文档：md 标签支持 @用户、超链接、有序/无序列表、代码块、引用、分割线、加粗、斜体、下划线、删除线
+		postContent := map[string]any{
+			"zh_cn": map[string]any{
+				"title": "",
+				"content": [][]map[string]any{
+					{
+						{"tag": "md", "text": content},
+					},
+				},
+			},
+		}
+		b, e := json.Marshal(postContent)
+		if e != nil {
+			// 转换失败降级为纯文本
+			b, e = json.Marshal(map[string]string{"text": content})
+			if e != nil {
+				return "", "", e
+			}
+			return larkim.MsgTypeText, string(b), nil
+		}
+		return larkim.MsgTypePost, string(b), nil
+	}
+
+	b, e := json.Marshal(map[string]string{"text": content})
+	if e != nil {
+		return "", "", e
+	}
+	return larkim.MsgTypeText, string(b), nil
+}
+
+// containsMarkdown 检测内容是否包含常见 Markdown 语法。
+func containsMarkdown(s string) bool {
+	markers := []string{"**", "```", "# ", "## ", "### ", "`", "[", "*", "> ", "- ", "1. "}
+	for _, m := range markers {
+		if strings.Contains(s, m) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *FeishuChannel) handleMessageReceive(_ context.Context, event *larkim.P2MessageReceiveV1) error {

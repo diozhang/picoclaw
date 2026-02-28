@@ -41,6 +41,7 @@ func DefaultConfig() *Config {
 				EncryptKey:        "",
 				VerificationToken: "",
 				AllowFrom:         FlexibleStringSlice{},
+				Tools:             FeishuToolsConfig{Enabled: false},
 			},
 			Discord: DiscordConfig{
 				Enabled:     false,

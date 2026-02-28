@@ -149,6 +149,9 @@ func registerSharedTools(
 			return registry.CanSpawnSubagent(currentAgentID, targetAgentID)
 		})
 		agent.Tools.Register(spawnTool)
+
+		// 飞书 API 工具集（仅在飞书通道启用且 tools.enabled=true 时注册）
+		registerFeishuTools(agent.Tools, cfg, agent.Workspace)
 	}
 }
 

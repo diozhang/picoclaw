@@ -83,7 +83,10 @@
       "app_secret": "",
       "encrypt_key": "",
       "verification_token": "",
-      "allow_from": []
+      "allow_from": [],
+      "tools": {
+        "enabled": false
+      }
     },
     "dingtalk": {
       "enabled": false,
