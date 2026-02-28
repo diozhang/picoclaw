@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sipeed/picoclaw/pkg/bus"
+	"github.com/sipeed/picoclaw/pkg/logger"
 )
 
 type Channel interface {
@@ -94,12 +95,22 @@ func (c *BaseChannel) HandleMessage(senderID, chatID, content string, media []st
 	if messageID, ok := metadata["message_id"]; ok && messageID != "" {
 		// 异步执行，不阻塞消息处理主流程
 		go func() {
+			// 延迟一小会儿，确保飞书后台已经处理完消息接收
+			time.Sleep(200 * time.Millisecond)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			// 这里的 c 实际上是具体的 channel 实现（如 FeishuChannel）
-			// 我们需要通过接口调用具体的 AddReaction 实现
-			if ch, ok := any(c).(Channel); ok {
-				_ = ch.AddReaction(ctx, messageID, "JIAYI")
+			
+			// 直接调用 c 上的 AddReaction，因为 c 是具体的实现类
+			err := c.AddReaction(ctx, messageID, "JIAYI")
+			if err != nil {
+				logger.ErrorCF("channels", "Auto-reaction failed", map[string]any{
+					"message_id": messageID,
+					"error":      err.Error(),
+				})
+			} else {
+				logger.DebugCF("channels", "Auto-reaction sent", map[string]any{
+					"message_id": messageID,
+				})
 			}
 		}()
 	}
