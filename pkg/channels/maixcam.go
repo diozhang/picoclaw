@@ -174,7 +174,7 @@ func (c *MaixCamChannel) handlePersonDetection(msg MaixCamMessage) {
 		"peer_id":   "default",
 	}
 
-	c.HandleMessage(senderID, chatID, content, []string{}, metadata)
+	c.HandleMessage(c, senderID, chatID, content, []string{}, metadata)
 }
 
 func (c *MaixCamChannel) handleStatusUpdate(msg MaixCamMessage) {

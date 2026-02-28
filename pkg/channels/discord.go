@@ -305,7 +305,7 @@ func (c *DiscordChannel) handleMessage(s *discordgo.Session, m *discordgo.Messag
 		"peer_id":      peerID,
 	}
 
-	c.HandleMessage(senderID, m.ChannelID, content, mediaPaths, metadata)
+	c.HandleMessage(c, senderID, m.ChannelID, content, mediaPaths, metadata)
 }
 
 // startTyping starts a continuous typing indicator loop for the given chatID.

@@ -265,7 +265,7 @@ func (c *FeishuChannel) handleMessageReceive(ctx context.Context, event *larkim.
 		"preview":   utils.Truncate(content, 80),
 	})
 
-	c.HandleMessage(senderID, chatID, content, nil, metadata)
+	c.HandleMessage(c, senderID, chatID, content, nil, metadata)
 	return nil
 }
 

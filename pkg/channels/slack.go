@@ -300,7 +300,7 @@ func (c *SlackChannel) handleMessageEvent(ev *slackevents.MessageEvent) {
 		"has_thread": threadTS != "",
 	})
 
-	c.HandleMessage(senderID, chatID, content, mediaPaths, metadata)
+	c.HandleMessage(c, senderID, chatID, content, mediaPaths, metadata)
 }
 
 func (c *SlackChannel) handleAppMention(ev *slackevents.AppMentionEvent) {
@@ -361,7 +361,7 @@ func (c *SlackChannel) handleAppMention(ev *slackevents.AppMentionEvent) {
 		"team_id":    c.teamID,
 	}
 
-	c.HandleMessage(senderID, chatID, content, nil, metadata)
+	c.HandleMessage(c, senderID, chatID, content, nil, metadata)
 }
 
 func (c *SlackChannel) handleSlashCommand(event socketmode.Event) {
@@ -406,7 +406,7 @@ func (c *SlackChannel) handleSlashCommand(event socketmode.Event) {
 		"text":      utils.Truncate(content, 50),
 	})
 
-	c.HandleMessage(senderID, chatID, content, nil, metadata)
+	c.HandleMessage(c, senderID, chatID, content, nil, metadata)
 }
 
 func (c *SlackChannel) downloadSlackFile(file slack.File) string {

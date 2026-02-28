@@ -85,7 +85,8 @@ func (c *BaseChannel) IsAllowed(senderID string) bool {
 	return false
 }
 
-func (c *BaseChannel) HandleMessage(senderID, chatID, content string, media []string, metadata map[string]string) {
+// HandleMessage 处理接收到的消息并发布到总线
+func (c *BaseChannel) HandleMessage(impl Channel, senderID, chatID, content string, media []string, metadata map[string]string) {
 	if !c.IsAllowed(senderID) {
 		return
 	}
@@ -100,15 +101,17 @@ func (c *BaseChannel) HandleMessage(senderID, chatID, content string, media []st
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			
-			// 直接调用 c 上的 AddReaction，因为 c 是具体的实现类
-			err := c.AddReaction(ctx, messageID, "JIAYI")
+			// 使用传入的 impl 调用 AddReaction，确保调用到具体的实现（如 FeishuChannel）
+			err := impl.AddReaction(ctx, messageID, "JIAYI")
 			if err != nil {
 				logger.ErrorCF("channels", "Auto-reaction failed", map[string]any{
+					"channel":    c.name,
 					"message_id": messageID,
 					"error":      err.Error(),
 				})
 			} else {
 				logger.DebugCF("channels", "Auto-reaction sent", map[string]any{
+					"channel":    c.name,
 					"message_id": messageID,
 				})
 			}

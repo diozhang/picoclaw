@@ -174,10 +174,7 @@ func (c *DingTalkChannel) onChatBotMessageReceived(
 	})
 
 	// Handle the message through the base channel
-	c.HandleMessage(senderID, chatID, content, nil, metadata)
-
-	// Return nil to indicate we've handled the message asynchronously
-	// The response will be sent through the message bus
+	c.HandleMessage(c, senderID, chatID, content, nil, metadata)
 	return nil, nil
 }
 
