@@ -2,6 +2,7 @@ package channels
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/sipeed/picoclaw/pkg/bus"
@@ -14,6 +15,7 @@ type Channel interface {
 	Send(ctx context.Context, msg bus.OutboundMessage) error
 	IsRunning() bool
 	IsAllowed(senderID string) bool
+	AddReaction(ctx context.Context, messageID, emojiType string) error
 }
 
 type BaseChannel struct {
@@ -100,4 +102,8 @@ func (c *BaseChannel) HandleMessage(senderID, chatID, content string, media []st
 
 func (c *BaseChannel) setRunning(running bool) {
 	c.running = running
+}
+
+func (c *BaseChannel) AddReaction(ctx context.Context, messageID, emojiType string) error {
+	return fmt.Errorf("AddReaction not implemented for channel %s", c.name)
 }

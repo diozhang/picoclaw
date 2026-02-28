@@ -38,6 +38,7 @@ type AgentLoop struct {
 	summarizing    sync.Map
 	fallback       *providers.FallbackChain
 	channelManager *channels.Manager
+	fastPath       *FastPathHandler
 }
 
 // processOptions configures how a message is processed
@@ -77,6 +78,7 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 		state:       stateManager,
 		summarizing: sync.Map{},
 		fallback:    fallbackChain,
+		fastPath:    NewFastPathHandler(msgBus),
 	}
 }
 
@@ -295,6 +297,13 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 	// Check for commands
 	if response, handled := al.handleCommand(ctx, msg); handled {
 		return response, nil
+	}
+
+	// 快速路径拦截 (FastPath) - 学习 OpenClaw 的极速决策
+	if al.fastPath != nil {
+		if response, handled := al.fastPath.TryHandle(ctx, msg, al.channelManager); handled {
+			return response, nil
+		}
 	}
 
 	// Route to determine agent and session key

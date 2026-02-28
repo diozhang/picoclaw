@@ -130,6 +130,24 @@ func (c *FeishuChannel) Send(ctx context.Context, msg bus.OutboundMessage) error
 	return nil
 }
 
+func (c *FeishuChannel) AddReaction(ctx context.Context, messageID, emojiType string) error {
+	req := larkim.NewCreateMessageReactionReqBuilder().
+		MessageId(messageID).
+		Body(larkim.NewCreateMessageReactionReqBodyBuilder().
+			ReactionType(larkim.NewEmojiBuilder().EmojiType(emojiType).Build()).
+			Build()).
+		Build()
+
+	resp, err := c.client.Im.V1.MessageReaction.Create(ctx, req)
+	if err != nil {
+		return err
+	}
+	if !resp.Success() {
+		return fmt.Errorf("feishu api error: code=%d msg=%s", resp.Code, resp.Msg)
+	}
+	return nil
+}
+
 // buildFeishuPayload 根据消息内容自动选择消息类型：
 // 含 Markdown 语法时使用 post 富文本的 md 标签（飞书原生支持 Markdown 渲染），否则发纯文本。
 func buildFeishuPayload(content string) (msgType string, payload string, err error) {
