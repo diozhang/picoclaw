@@ -312,7 +312,9 @@ func normalizeModel(model, apiBase string) string {
 		return model
 	}
 
-	if strings.Contains(strings.ToLower(apiBase), "openrouter.ai") {
+	// 增强对 OpenRouter 的识别，包括通过 Cloudflare 等网关转发的情况
+	lowerBase := strings.ToLower(apiBase)
+	if strings.Contains(lowerBase, "openrouter.ai") || strings.Contains(lowerBase, "/openrouter") {
 		return model
 	}
 
