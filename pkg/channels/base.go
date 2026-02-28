@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/sipeed/picoclaw/pkg/bus"
 )
@@ -86,6 +87,21 @@ func (c *BaseChannel) IsAllowed(senderID string) bool {
 func (c *BaseChannel) HandleMessage(senderID, chatID, content string, media []string, metadata map[string]string) {
 	if !c.IsAllowed(senderID) {
 		return
+	}
+
+	// 自动确认机制：对收到的每一条消息，首先尝试回复一个 +1 表情
+	// 这是一个“脊髓反射”动作，不经过 LLM，提升响应感知
+	if messageID, ok := metadata["message_id"]; ok && messageID != "" {
+		// 异步执行，不阻塞消息处理主流程
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			// 这里的 c 实际上是具体的 channel 实现（如 FeishuChannel）
+			// 我们需要通过接口调用具体的 AddReaction 实现
+			if ch, ok := any(c).(Channel); ok {
+				_ = ch.AddReaction(ctx, messageID, "JIAYI")
+			}
+		}()
 	}
 
 	msg := bus.InboundMessage{
