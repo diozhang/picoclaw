@@ -110,6 +110,15 @@ The following skills extend your capabilities. To use a skill, read its SKILL.md
 		parts = append(parts, "# Memory\n\n"+memoryContext)
 	}
 
+	// 注入极速决策 (FastPath) 的说明，让 AI 知道这个机制的存在
+	parts = append(parts, `# FastPath (极速决策)
+
+The system has a "FastPath" interceptor that handles simple intents before they reach you.
+- **Reaction Triggers**: If the user sends simple confirmation words like "OK", "好的", "收到", "+1", etc., the system will automatically add a 👍 reaction to the message and bypass LLM reasoning.
+- **Abort Triggers**: If the user sends "stop", "halt", "停止", etc., the system will immediately stop the current task.
+
+When you see a message that was handled by FastPath, it means the action has already been performed by the system.`)
+
 	// Join with "---" separator
 	return strings.Join(parts, "\n\n---\n\n")
 }
